@@ -1,0 +1,8 @@
+Changes
+Makefile.PL
+README
+MANIFEST
+script/mp3rename
+t/mp3rename.t
+t/test_artist_-_test_album_-_04_-_test_track.mp3
+mp3rename.spec

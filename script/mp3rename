@@ -1,0 +1,250 @@
+#!/usr/bin/perl -w
+
+my $RCS_Id = '$Id: mp3rename.pl,v 1.7 2003/08/01 10:11:07 jv Exp $ ';
+
+# Author          : Johan Vromans
+# Created On      : Fri Jan 17 20:47:08 2003
+# Last Modified By: Johan Vromans
+# Last Modified On: Fri Aug  1 12:10:59 2003
+# Update Count    : 75
+# Status          : Unknown, Use with caution!
+
+################ Common stuff ################
+
+$VERSION = sprintf("%d.%02d", '$Revision: 1.7 $ ' =~ /: (\d+)\.(\d+)/);
+
+use strict;
+use warnings;
+
+# Package name.
+my $my_package = 'Sciurix';
+# Program name and version.
+my ($my_name, $my_version) = $RCS_Id =~ /: (.+).pl,v ([\d.]+)/;
+# Tack '*' if it is not checked in into RCS.
+$my_version .= '*' if length('$Locker:  $ ') > 12;
+
+################ Command line parameters ################
+
+my $target = "";		# target dir
+my $va = 0;			# various artists
+my $verbose = 0;		# verbose processing
+
+# Development options (not shown with -help).
+my $debug = 0;			# debugging
+my $trace = 0;			# trace (show process)
+my $test = 0;			# test mode.
+
+# Process command line options.
+app_options();
+
+# Post-processing.
+$target .= "/" if $target;
+$trace |= ($debug || $test);
+$verbose |= $test;
+
+################ Presets ################
+
+# my $TMPDIR = $ENV{TMPDIR} || $ENV{TEMP} || '/usr/tmp';
+
+################ The Process ################
+
+use File::Basename;
+use File::Path qw(mkpath);
+use MP3::Info;
+
+foreach my $file ( @ARGV ) {
+
+    next unless -f $file;
+    my $mp3 = get_mp3tag($file);
+    next unless $mp3;
+
+    my $artist = join("_", map { ucfirst lc $_ } split(' ',$mp3->{ARTIST}));
+    my $album  = join("_", map { ucfirst lc $_ } split(' ',$mp3->{ALBUM} ));
+    my $title  = join("_", map { ucfirst lc $_ } split(' ',$mp3->{TITLE} ));
+
+    $artist ||= "Unknown";
+    $album  ||= "Unknown";
+    $title  ||= basename($file, ".mp3");
+
+    if ( $va ) {
+	$title = $artist . ":_" . $title;
+	$artist = "Various";
+    }
+
+    my $track  = 0;
+    $track = $1 if ($mp3->{TRACKNUM}||"") =~ /^(\d+)/;
+    # Try to infer from filename, e.g. "04_Foo.mp4" or "Artist_-_Album_-_04_-_Foo.mp3";
+    $track = $1 if !$track && $file =~ /(?:^|_)(\d{1,2})_/;
+    $title = sprintf("%02d_%s", $track, $title) if $track;
+    # Sometimes the track is also part of the title. Strip.
+    $title =~ s/^(\d+)_\1[-_]/$1_/;
+    # Some normalisations.
+    for ( $title, $artist, $album ) {
+	s/_\(([a-z])/"_(".uc($1)/ge;
+	s/_\[([a-z])/"_[".uc($1)/ge;
+	s/-([a-z])/"-".uc($1)/ge;
+	s/[\/"]/_/g;
+	s/__+/_/g;
+	s/^_//;
+	s/_$//;
+    }
+    my $dir = join("/", $artist, $album);
+
+    warn("+ rename $file => $target$dir/$title.mp3\n") if $verbose;
+    if ( -s "$dir/$title.mp3" ) {
+	if ( differ($file, "$dir/$title.mp3") ) {
+	    warn("ERROR: Differing $dir/$title.mp3 already exists\n");
+	}
+	else {
+	    warn("WARNING: Identical $dir/$title.mp3 already exists\n");
+	    unlink($file);
+	}
+    }
+    else {
+	next if $test;
+	mkpath(["$target$dir"],1,0775) unless -d "$target$dir";
+	rename($file, "$target$dir/$title.mp3")
+	  or warn("+ rename $file => $target$dir/$title.mp3\n".
+		  "ERROR: $!\n");
+    }
+}
+
+################ Subroutines ################
+
+sub differ {
+    # Perl version of the 'cmp' program.
+    # Returns 1 if the files differ, 0 if the contents are equal.
+    my ($old, $new) = @_;
+    unless ( open (F1, $old) ) {
+	print STDERR ("$old: $!\n");
+	return 1;
+    }
+    unless ( open (F2, $new) ) {
+	print STDERR ("$new: $!\n");
+	return 1;
+    }
+    my ($buf1, $buf2);
+    my ($len1, $len2);
+    while ( 1 ) {
+	$len1 = sysread (F1, $buf1, 10240);
+	$len2 = sysread (F2, $buf2, 10240);
+	return 0 if $len1 == $len2 && $len1 == 0;
+	return 1 if $len1 != $len2 || ( $len1 && $buf1 ne $buf2 );
+    }
+}
+
+################ Subroutines ################
+
+################ Command Line Options ################
+
+use Getopt::Long 2.33;		# will enable help/version
+
+sub app_options {
+    my $help = 0;		# handled locally
+    my $ident = 0;		# handled locally
+
+    GetOptions(ident	=> \&app_ident,
+	       verbose	=> \$verbose,
+
+	       # application specific options go here
+	       'target=s' => \$target,
+	       va	=> \$va,
+
+	       # development options
+	       test	=> \$test,
+	       trace	=> \$trace,
+	       debug	=> \$debug)
+      or Getopt::Long::HelpMessage(2);
+}
+
+sub app_ident {
+    print STDERR ("This is $my_package [$my_name $my_version]\n");
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+mp3rename - rename MP3 files according to ID3 information
+
+=head1 SYNOPSIS
+
+rename_mp3 [options] [file ...]
+
+Options:
+
+    --target XXX	target dir
+    --various-artists	use "Various/Album/Artist:_Title"
+    --test		show what would have been done, but don't do it
+    --help		this message
+    --ident		show identification
+    --verbose		verbose information
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--target> I<XXX>
+
+The target directory where the files are renamed into.
+
+=item B<--various-artists>
+
+Use an alternative form for the file name, suitable for albums that
+contain tracks of various artists. See L<DESCRIPTION>.
+Note that you can abbreviate this conveniently to B<--va>.
+
+=item B<--test>
+
+Show what would have been done, but don't do it.
+
+=item B<--verbose>
+
+Show what is being done.
+
+=item B<--version>
+
+Print a version identification to standard output and exits.
+
+=item B<--help>
+
+Print a brief help message to standard output and exits.
+
+=item B<--ident>
+
+Prints a program identification before proceeding.
+
+=back
+
+=head1 DESCRIPTION
+
+B<mp3rename> will read the ID3 information from the given input
+file(s) and use it to rename the file(s) to a standardized name.
+Care is taken to not overwrite existing files.
+
+Default file name format is
+I<Artist>/I<Album_Title>/I<Track_Number>_I<Track_Title>.mp3.
+
+With B<--various-artists> selected:
+Various/I<Album_Title>/I<Artist>:_I<Track_Number>_I<Track_Title>.mp3.
+
+Attempts are made to sanitize the filename components: underscores
+instead of spaces, all words titlecased, and problematic characters
+avoided. Track numbers are always two digits.
+
+=head1 AUTHOR
+
+Johan Vromans <jvromans@squirrel.nl>
+
+=head1 COPYRIGHT
+
+This programs is Copyright 2003, Squirrel Consultancy.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Perl Artistic License or the GNU General
+Public License as published by the Free Software Foundation; either
+version 2 of the License, or (at your option) any later version.
+
+=cut
