@@ -6,3 +6,5 @@ script/mp3rename
 t/mp3rename.t
 t/test_artist_-_test_album_-_04_-_test_track.mp3
 mp3rename.spec
+mp3rename.spec.in
+META.yml                                Module meta-data (added by MakeMaker)

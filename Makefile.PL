@@ -16,7 +16,7 @@ convenient location) to "make install".
 
 EOD
 
-WriteMakefile(
+my $x = WriteMakefile(
     NAME		=> 'mp3rename',
     VERSION_FROM	=> 'script/mp3rename',
     PREREQ_PM		=> { 'Getopt::Long' => 2.33,
@@ -29,4 +29,18 @@ WriteMakefile(
        AUTHOR        => 'Johan Vromans <jv@cpan.org>') : ()),
 );
 
+my $name    = $x->{NAME};
+my $version = $x->{VERSION};
 
+my $fh;
+if ( open ($fh, "$name.spec.in") ) {
+    print "Writing RPM spec file...\n";
+    my $newfh;
+    open ($newfh, ">$name.spec");
+    while ( <$fh> ) {
+	s/%define modname \w+/%define modname $name/;
+	s/%define modversion \d+\.\d+/%define modversion $version/;
+	print $newfh $_;
+    }
+    close($newfh);
+}

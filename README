@@ -25,6 +25,13 @@ To install this module type the following:
    make test
    make install
 
+RPM SUPPORT
+
+RPM based systems can build an installtion RPM directory from the
+distributed tar file:
+
+   rpmbuild -ta mp3rename-x.y.tar.gz
+
 DEPENDENCIES
 
 This module requires these other modules and libraries:

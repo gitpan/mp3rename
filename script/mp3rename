@@ -1,17 +1,17 @@
 #!/usr/bin/perl -w
 
-my $RCS_Id = '$Id: mp3rename.pl,v 1.8 2003/08/01 10:23:34 jv Exp $ ';
+my $RCS_Id = '$Id: mp3rename.pl,v 1.13 2003/09/28 14:25:22 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : Fri Jan 17 20:47:08 2003
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Aug  1 12:22:07 2003
-# Update Count    : 76
+# Last Modified On: Sun Sep 28 16:24:39 2003
+# Update Count    : 86
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
 
-$VERSION = sprintf("%d.%02d", '$Revision: 1.8 $ ' =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", '$Revision: 1.13 $ ' =~ /: (\d+)\.(\d+)/);
 
 use strict;
 use warnings;
@@ -73,8 +73,10 @@ foreach my $file ( @ARGV ) {
 
     my $track  = 0;
     $track = $1 if ($mp3->{TRACKNUM}||"") =~ /^(\d+)/;
-    # Try to infer from filename, e.g. "04_Foo.mp4" or "Artist_-_Album_-_04_-_Foo.mp3";
-    $track = $1 if !$track && $file =~ /(?:^|_)(\d{1,2})_/;
+    # Try to infer from filename, e.g. "04_Foo.mp4"
+    # or "Artist_-_Album_-_04_-_Foo.mp3"
+    # or "04._Artist_-_Album_-_Foo.mp3"
+    $track = $1 if !$track && $file =~ /(?:^|\/|_)(\d{1,2})\.?_[^\/]*$/;
     $title = sprintf("%02d_%s", $track, $title) if $track;
     # Sometimes the track is also part of the title. Strip.
     $title =~ s/^(\d+)_\1[-_]/$1_/;
@@ -83,7 +85,7 @@ foreach my $file ( @ARGV ) {
 	s/_\(([a-z])/"_(".uc($1)/ge;
 	s/_\[([a-z])/"_[".uc($1)/ge;
 	s/-([a-z])/"-".uc($1)/ge;
-	s/[\/"]/_/g;
+	s/[\/"\`?!]/_/g;
 	s/__+/_/g;
 	s/^_//;
 	s/_$//;
@@ -144,7 +146,7 @@ sub app_options {
     my $ident = 0;		# handled locally
 
     GetOptions(ident	=> \&app_ident,
-	       verbose	=> \$verbose,
+	       'verbose|v' => \$verbose,
 
 	       # application specific options go here
 	       'target=s' => \$target,
@@ -167,7 +169,7 @@ __END__
 
 =head1 NAME
 
-mp3rename - rename MP3 files according to ID3 information
+mp3rename - Rename MP3 files according to ID3 information
 
 =head1 SYNOPSIS
 

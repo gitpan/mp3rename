@@ -1,4 +1,9 @@
-Revision history for Perl extension mp3rename.
+Revision history for mp3rename.
+
+1.13  Sun Sep 28 16:27:44 2003
+	- Enhance track number detection in file names.
+	- Exclude characters ` ? ! from file names.
+	- Fix verbose/v clash.
 
 1.08  Fri Aug 01 12:35:44 2003
         - Fixed flaw in duplicate detection.
