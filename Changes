@@ -1,5 +1,11 @@
 Revision history for Perl extension mp3rename.
 
-1.06  Fri Aug 01 12:21:58 2003
+1.08  Fri Aug 01 12:35:44 2003
+        - Fixed flaw in duplicate detection.
+
+1.07  Fri Aug 01 11:42:33 2003
+        - First CPAN Release
+
+1.06  Fri Aug 01 11:21:58 2003
 	- initial version; imported from MP3Tools
 
