@@ -1,3 +1,5 @@
+#! -*-perl-*-
+
 use strict;
 use Test::More tests => 7;
 use File::Path;
@@ -20,4 +22,4 @@ is(-s "td/Test_Artist/Test_Album/04_Test_Track.mp3", $x1l);
 rename("td/Test_Artist/Test_Album/04_Test_Track.mp3", $orig);
 is(-s $orig, $x1l);
 
-rmtree(["td"], 1, 1);
+#rmtree(["td"], 1, 1);
